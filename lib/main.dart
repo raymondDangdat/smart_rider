@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smart_rider/allScreens/login_screen.dart';
 import 'package:smart_rider/allScreens/main_screen.dart';
+import 'package:smart_rider/allScreens/registration_screen.dart';
 
 void main() {
   runApp(MyApp());
@@ -18,8 +19,12 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: LoginScreen(),
+      initialRoute: LoginScreen.routeName,
+      routes: {
+        RegistrationScreen.routeName: (context) => RegistrationScreen(),
+        MainScreen.routeName: (context) => MainScreen(),
+        LoginScreen.routeName: (context) => LoginScreen(),
+      },
     );
   }
 }
-

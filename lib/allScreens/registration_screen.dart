@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:smart_rider/allScreens/registration_screen.dart';
+import 'package:smart_rider/allScreens/login_screen.dart';
 
-class LoginScreen extends StatelessWidget {
-  static const routeName = "login-screen";
+class RegistrationScreen extends StatelessWidget {
+  static const routeName = "registration-screen";
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -13,7 +13,7 @@ class LoginScreen extends StatelessWidget {
           child: new Column(
             children: [
               SizedBox(
-                height: 35.0,
+                height: 20.0,
               ),
               Image(
                 image: AssetImage("images/logo.png"),
@@ -24,7 +24,7 @@ class LoginScreen extends StatelessWidget {
                 height: 1.0,
               ),
               Text(
-                "Login As a Rider",
+                "Register As a Rider",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 24.0, fontFamily: "Brand Bold"),
               ),
@@ -36,9 +36,33 @@ class LoginScreen extends StatelessWidget {
                       height: 1.0,
                     ),
                     TextField(
+                      keyboardType: TextInputType.name,
+                      decoration: InputDecoration(
+                        labelText: "Name",
+                        labelStyle:
+                            TextStyle(color: Colors.grey, fontSize: 10.0),
+                      ),
+                      style: TextStyle(fontSize: 14.0),
+                    ),
+                    SizedBox(
+                      height: 1.0,
+                    ),
+                    TextField(
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: "Email",
+                        labelStyle:
+                            TextStyle(color: Colors.grey, fontSize: 10.0),
+                      ),
+                      style: TextStyle(fontSize: 14.0),
+                    ),
+                    SizedBox(
+                      height: 1.0,
+                    ),
+                    TextField(
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: "Phone",
                         labelStyle:
                             TextStyle(color: Colors.grey, fontSize: 10.0),
                       ),
@@ -65,7 +89,7 @@ class LoginScreen extends StatelessWidget {
                       child: Container(
                         height: 50.0,
                         child: Text(
-                          "Login",
+                          "Create Account",
                           style: TextStyle(
                               fontSize: 18.0, fontFamily: "Brand Bold"),
                         ),
@@ -81,9 +105,9 @@ class LoginScreen extends StatelessWidget {
               FlatButton(
                   onPressed: () {
                     Navigator.pushNamedAndRemoveUntil(context,
-                        RegistrationScreen.routeName, (route) => false);
+                        LoginScreen.routeName, (route) => false);
                   },
-                  child: Text('Do not have an Account? Register Here'))
+                  child: Text('Already have an account?? Login Here'))
             ],
           ),
         ),
