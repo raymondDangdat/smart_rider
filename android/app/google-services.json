@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "672381486599",
+    "project_id": "smart-rider-65f61",
+    "storage_bucket": "smart-rider-65f61.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:672381486599:android:3b856e3be2a27b13724ca2",
+        "android_client_info": {
+          "package_name": "com.smart.rider"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "672381486599-3rj7g677s53dntshust59l5t1a6os1mc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAD9JUuKIGCBzv6LZUh7VuuaY1eyd0RPW4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "672381486599-3rj7g677s53dntshust59l5t1a6os1mc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
