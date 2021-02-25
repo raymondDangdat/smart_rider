@@ -178,13 +178,15 @@ class _MainScreenState extends State<MainScreen> {
                         children: [
                           Icon(Icons.home, color: Colors.grey,),
                           SizedBox(width: 12.0,),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(Provider.of<AppData>(context).pickUpLocation != null ? Provider.of<AppData>(context).pickUpLocation.placeName : "Add Home Address", style: TextStyle(fontSize: 9.0), overflow: TextOverflow.ellipsis,),
-                              SizedBox(height: 4.0,),
-                              Text("Your living home address", style: TextStyle(color: Colors.black54, fontSize: 12.0),)
-                            ],
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(Provider.of<AppData>(context).pickUpLocation != null ? Provider.of<AppData>(context).pickUpLocation.placeName : "Add Home Address", style: TextStyle(fontSize: 12.0), overflow: TextOverflow.ellipsis,),
+                                SizedBox(height: 4.0,),
+                                Text("Your living home address", style: TextStyle(color: Colors.black54, fontSize: 12.0),)
+                              ],
+                            ),
                           )
                         ],
                       ),

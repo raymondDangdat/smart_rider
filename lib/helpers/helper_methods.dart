@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:smart_rider/configMaps.dart';
 import 'package:smart_rider/dataHandler/app_data.dart';
 import 'package:smart_rider/helpers/api_helper.dart';
-import 'package:smart_rider/model/address.dart';
+import 'package:smart_rider/models/address.dart';
 
 class HelperMethods{
   static Future<String> searchCoordinateAddress (Position position, context)async{
