@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_rider/allScreens/main_screen.dart';
 import 'package:smart_rider/allScreens/registration_screen.dart';
 import 'package:smart_rider/main.dart';
+import 'package:smart_rider/widgets/progress_dialog.dart';
 
 class LoginScreen extends StatelessWidget {
   static const routeName = "login-screen";
@@ -113,13 +114,16 @@ class LoginScreen extends StatelessWidget {
 
   final _firebaseAuth = FirebaseAuth.instance;
   void loginUser(BuildContext context) async {
+    showDialog(context:  context, barrierDismissible: false, builder: (BuildContext context){
+      return ProgressDialog(message: "Authenticating, please wait...",);
+    });
     final User user = (await _firebaseAuth
             .signInWithEmailAndPassword(
                 email: emailController.text, password: passwordController.text)
             .catchError((errMs) {
+              Navigator.of(context).pop();
       displayToastMessage(context, "Error occurred! " + errMs.toString());
-    }))
-        .user;
+    })).user;
 
     if (user != null) {
       //  User has been logged in!
@@ -130,6 +134,7 @@ class LoginScreen extends StatelessWidget {
               Navigator.pushNamedAndRemoveUntil(
                   context, MainScreen.routeName, (route) => false);
             } else {
+              Navigator.of(context).pop();
               //  Something went wrong and user info is not saved in the database;
               _firebaseAuth.signOut();
               displayToastMessage(
@@ -138,6 +143,7 @@ class LoginScreen extends StatelessWidget {
           });
     } else {
       //  Problem occurred and user was not created
+      Navigator.of(context).pop();
       displayToastMessage(
           context, "Could not login user, please try again later");
     }
