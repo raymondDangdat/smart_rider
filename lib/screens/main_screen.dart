@@ -8,6 +8,7 @@ import 'package:smart_rider/dataHandler/app_data.dart';
 import 'package:smart_rider/helpers/helper_methods.dart';
 import 'package:smart_rider/screens/search_screen.dart';
 import 'package:smart_rider/widgets/divider.dart';
+import 'package:smart_rider/widgets/progress_dialog.dart';
 
 class MainScreen extends StatefulWidget {
   static const routeName = "main-screen";
@@ -146,8 +147,12 @@ class _MainScreenState extends State<MainScreen> {
                       SizedBox(height: 20.0,),
                       
                       GestureDetector(
-                        onTap: (){
-                          Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen()));
+                        onTap: () async {
+                         var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen()));
+
+                         if(res == "obtainDirection"){
+                           await getPlaceDirection();
+                         }
                         },
                         child: Container(
                           decoration: BoxDecoration(
@@ -220,5 +225,24 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> getPlaceDirection() async{
+    var initialPos = Provider.of<AppData>(context,listen: false).pickUpLocation;
+    var finalPos = Provider.of<AppData>(context, listen: false).dropOffLocation;
+
+    var pickUpLatLng = LatLng(initialPos.latitude, initialPos.longitude);
+    var dropOffLatLng = LatLng(finalPos.latitude, finalPos.longitude);
+
+    showDialog(context: context,
+        builder: (BuildContext context) => ProgressDialog(message: "Please wait...")
+    );
+
+    var details = await HelperMethods.obtainPlaceDirectionDetails(pickUpLatLng, dropOffLatLng);
+
+    Navigator.of(context).pop();
+
+    print("This are the encoded points ::");
+    print(details.encodedPoints);
   }
 }

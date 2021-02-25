@@ -222,6 +222,8 @@ class PredictionTile extends StatelessWidget {
       Provider.of<AppData>(context, listen: false).updateDropOffLocationAddress(address);
       print("This is Drop off Location :: ");
       print(address.placeName);
+
+      Navigator.pop(context, "obtainDirection");
     }
   }
 }
