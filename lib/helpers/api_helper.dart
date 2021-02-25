@@ -8,8 +8,8 @@ class ApiRequestHelper{
     try{
       if(response.statusCode == 200){
         String jsonData = response.body;
-        var decodeData = jsonDecode(jsonData);
-        return decodeData;
+        var decodedData = jsonDecode(jsonData);
+        return decodedData;
       }else{
         return "failed";
       }

@@ -1,10 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:smart_rider/allScreens/login_screen.dart';
-import 'package:smart_rider/allScreens/main_screen.dart';
 import 'package:smart_rider/main.dart';
 import 'package:smart_rider/widgets/progress_dialog.dart';
+
+import 'login_screen.dart';
+import 'main_screen.dart';
 
 class RegistrationScreen extends StatelessWidget {
   static const routeName = "registration-screen";

@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-import 'package:smart_rider/allScreens/main_screen.dart';
-import 'package:smart_rider/allScreens/registration_screen.dart';
 import 'package:smart_rider/main.dart';
+import 'package:smart_rider/screens/main_screen.dart';
+import 'package:smart_rider/screens/registration_screen.dart';
 import 'package:smart_rider/widgets/progress_dialog.dart';
 
 class LoginScreen extends StatelessWidget {
