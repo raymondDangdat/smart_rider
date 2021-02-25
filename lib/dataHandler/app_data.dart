@@ -1,5 +1,5 @@
 import 'package:flutter/cupertino.dart';
-import 'package:smart_rider/model/address.dart';
+import 'package:smart_rider/models/address.dart';
 
 class AppData extends ChangeNotifier{
 
