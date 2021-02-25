@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:smart_rider/dataHandler/app_data.dart';
 import 'package:smart_rider/helpers/helper_methods.dart';
+import 'package:smart_rider/screens/search_screen.dart';
 import 'package:smart_rider/widgets/divider.dart';
 
 class MainScreen extends StatefulWidget {
@@ -29,7 +32,7 @@ class _MainScreenState extends State<MainScreen> {
     CameraPosition cameraPosition = new CameraPosition(target: latLngPosition, zoom: 14.0);
     newGoogleMapController.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
 
-    String address = await HelperMethods.searchCoordinateAddress(position);
+    String address = await HelperMethods.searchCoordinateAddress(position, context);
     print("This is your address :: " + address);
   }
 
@@ -141,26 +144,32 @@ class _MainScreenState extends State<MainScreen> {
                       Text("Hi there,", style: TextStyle(fontSize: 12.0), ),
                       Text("Where to?,", style: TextStyle(fontSize: 20.0, fontFamily: "Brand Bold"), ),
                       SizedBox(height: 20.0,),
-                      Container(
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(5.0),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: Colors.black54,
-                                  blurRadius: 2.0,
-                                  spreadRadius: 0.2,
-                                  offset: Offset(0.5, 0.5)
-                              )
-                            ]
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Row(children: [
-                            Icon(Icons.search, color: Colors.blueAccent,),
-                            SizedBox(width: 10.0,),
-                            Text("Search Drop Off")
-                          ],
+                      
+                      GestureDetector(
+                        onTap: (){
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen()));
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(5.0),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: Colors.black54,
+                                    blurRadius: 2.0,
+                                    spreadRadius: 0.2,
+                                    offset: Offset(0.5, 0.5)
+                                )
+                              ]
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12.0),
+                            child: Row(children: [
+                              Icon(Icons.search, color: Colors.blueAccent,),
+                              SizedBox(width: 10.0,),
+                              Text("Search Drop Off")
+                            ],
+                            ),
                           ),
                         ),
                       ),
@@ -172,7 +181,7 @@ class _MainScreenState extends State<MainScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Add Home"),
+                              Text(Provider.of<AppData>(context).pickUpLocation != null ? Provider.of<AppData>(context).pickUpLocation.placeName : "Add Home Address", style: TextStyle(fontSize: 9.0), overflow: TextOverflow.ellipsis,),
                               SizedBox(height: 4.0,),
                               Text("Your living home address", style: TextStyle(color: Colors.black54, fontSize: 12.0),)
                             ],
