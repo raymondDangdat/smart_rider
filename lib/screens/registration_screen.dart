@@ -27,7 +27,7 @@ class RegistrationScreen extends StatelessWidget {
                 height: 20.0,
               ),
               Image(
-                image: AssetImage("images/logo.png"),
+                image: AssetImage("images/icon.png"),
                 width: 390.0,
                 height: 250.0,
               ),
@@ -99,7 +99,7 @@ class RegistrationScreen extends StatelessWidget {
                       height: 20.0,
                     ),
                     RaisedButton(
-                      color: Colors.yellow,
+                      color: Colors.blue,
                       textColor: Colors.white,
                       child: Container(
                         height: 50.0,
