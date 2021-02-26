@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -12,6 +13,7 @@ import 'package:smart_rider/configMaps.dart';
 import 'package:smart_rider/dataHandler/app_data.dart';
 import 'package:smart_rider/helpers/helper_methods.dart';
 import 'package:smart_rider/models/direction_details.dart';
+import 'package:smart_rider/screens/login_screen.dart';
 import 'package:smart_rider/screens/search_screen.dart';
 import 'package:smart_rider/widgets/divider.dart';
 import 'package:smart_rider/widgets/progress_dialog.dart';
@@ -161,6 +163,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         title: Text('Smart Rider'),
         centerTitle: true,
         leading: Container(),
+        actions: [
+          IconButton(icon: Icon(Icons.exit_to_app), onPressed: (){FirebaseAuth.instance.signOut();
+          Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (route) => false);
+          })
+        ],
       ),
       drawer: Container(
         color: Colors.white,
@@ -227,6 +234,18 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 leading: Icon(Icons.info),
                 title: Text(
                   "History",
+                  style: TextStyle(fontSize: 15.0),
+                ),
+              ),
+
+              ListTile(
+                onTap: (){
+                  FirebaseAuth.instance.signOut();
+                  Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (route) => false);
+                },
+                leading: Icon(Icons.info),
+                title: Text(
+                  "Logout",
                   style: TextStyle(fontSize: 15.0),
                 ),
               ),
