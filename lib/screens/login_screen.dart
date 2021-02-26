@@ -114,33 +114,39 @@ class LoginScreen extends StatelessWidget {
 
   final _firebaseAuth = FirebaseAuth.instance;
   void loginUser(BuildContext context) async {
-    showDialog(context:  context, barrierDismissible: false, builder: (BuildContext context){
-      return ProgressDialog(message: "Authenticating, please wait...",);
-    });
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return ProgressDialog(
+            message: "Authenticating, please wait...",
+          );
+        });
     final User user = (await _firebaseAuth
             .signInWithEmailAndPassword(
                 email: emailController.text, password: passwordController.text)
             .catchError((errMs) {
-              Navigator.of(context).pop();
+      Navigator.of(context).pop();
       displayToastMessage(context, "Error occurred! " + errMs.toString());
-    })).user;
+    }))
+        .user;
 
     if (user != null) {
       //  User has been logged in!
 
       usersRef.child(user.uid).once().then((DataSnapshot snapshot) {
-            if (snapshot.value != null) {
-              //  User has record, send the user to the main screen
-              Navigator.pushNamedAndRemoveUntil(
-                  context, MainScreen.routeName, (route) => false);
-            } else {
-              Navigator.of(context).pop();
-              //  Something went wrong and user info is not saved in the database;
-              _firebaseAuth.signOut();
-              displayToastMessage(
-                  context, "No record found, please create a new account");
-            }
-          });
+        if (snapshot.value != null) {
+          //  User has record, send the user to the main screen
+          Navigator.pushNamedAndRemoveUntil(
+              context, MainScreen.routeName, (route) => false);
+        } else {
+          Navigator.of(context).pop();
+          //  Something went wrong and user info is not saved in the database;
+          _firebaseAuth.signOut();
+          displayToastMessage(
+              context, "No record found, please create a new account");
+        }
+      });
     } else {
       //  Problem occurred and user was not created
       Navigator.of(context).pop();
