@@ -36,6 +36,8 @@ dependencies:
   geolocator: ^6.2.1
   http: ^0.12.2
   provider: ^4.3.3
+  flutter_polyline_points: ^0.2.4
+  font_awesome_flutter: ^8.11.0
 
 dev_dependencies:
   flutter_test:

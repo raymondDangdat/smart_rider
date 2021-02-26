@@ -154,9 +154,14 @@ class RegistrationScreen extends StatelessWidget {
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   void registerNewUser(BuildContext context) async {
-    showDialog(context:  context, barrierDismissible: false, builder: (BuildContext context){
-      return ProgressDialog(message: "Creating account, please wait...",);
-    });
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return ProgressDialog(
+            message: "Creating account, please wait...",
+          );
+        });
 
     final User user = (await _firebaseAuth
             .createUserWithEmailAndPassword(

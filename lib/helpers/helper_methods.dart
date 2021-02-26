@@ -7,14 +7,16 @@ import 'package:smart_rider/helpers/api_helper.dart';
 import 'package:smart_rider/models/address.dart';
 import 'package:smart_rider/models/direction_details.dart';
 
-class HelperMethods{
-  static Future<String> searchCoordinateAddress (Position position, context)async{
+class HelperMethods {
+  static Future<String> searchCoordinateAddress(
+      Position position, context) async {
     String placeAddress = "";
     String st1, st2, st3, st4;
-    String url = "https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$mapKey";
+    String url =
+        "https://maps.googleapis.com/maps/api/geocode/json?latlng=${position.latitude},${position.longitude}&key=$mapKey";
     var response = await ApiRequestHelper.getRequest(url);
 
-    if(response != "failed"){
+    if (response != "failed") {
       // placeAddress = response["results"][0]["formatted_address"];
 
       //to get the house number use index 0 for long_name and for street name use index 1
@@ -24,36 +26,43 @@ class HelperMethods{
       st3 = response["results"][0]["address_components"][4]["long_name"];
       st4 = response["results"][0]["address_components"][4]["long_name"];
 
-      placeAddress = st1  + ", " + st2 + ", " + st3 + ", " + st4;
+      placeAddress = st1 + ", " + st2 + ", " + st3 + ", " + st4;
 
       Address userPickUpAddress = new Address();
       userPickUpAddress.longitude = position.longitude;
       userPickUpAddress.latitude = position.latitude;
       userPickUpAddress.placeName = placeAddress;
-      
-      Provider.of<AppData>(context, listen: false).updatePickUpLocationAddress(userPickUpAddress);
 
+      Provider.of<AppData>(context, listen: false)
+          .updatePickUpLocationAddress(userPickUpAddress);
     }
     return placeAddress;
   }
 
-  static Future<DirectionDetails> obtainPlaceDirectionDetails(LatLng initialPosition, LatLng finalPosition) async {
-    String directionUrl = "https://maps.googleapis.com/maps/api/directions/json?origin=${initialPosition.latitude}, ${initialPosition.longitude}&destination=${finalPosition.latitude}, ${finalPosition.longitude}&key=$mapKey";
+  static Future<DirectionDetails> obtainPlaceDirectionDetails(
+      LatLng initialPosition, LatLng finalPosition) async {
+    String directionUrl =
+        "https://maps.googleapis.com/maps/api/directions/json?origin=${initialPosition.latitude}, ${initialPosition.longitude}&destination=${finalPosition.latitude}, ${finalPosition.longitude}&key=$mapKey";
 
     var res = await ApiRequestHelper.getRequest(directionUrl);
 
-    if(res == "failed"){
+    if (res == "failed") {
       return null;
     }
 
     DirectionDetails directionDetails = DirectionDetails();
-    directionDetails.encodedPoints =  res["routes"][0]["overview_polyline"]["points"];
+    directionDetails.encodedPoints =
+        res["routes"][0]["overview_polyline"]["points"];
 
-    directionDetails.distanceText =  res["routes"][0]["legs"][0]["distance"]["text"];
-    directionDetails.distanceValue =  res["routes"][0]["legs"][0]["distance"]["value"];
+    directionDetails.distanceText =
+        res["routes"][0]["legs"][0]["distance"]["text"];
+    directionDetails.distanceValue =
+        res["routes"][0]["legs"][0]["distance"]["value"];
 
-    directionDetails.durationText =  res["routes"][0]["legs"][0]["duration"]["text"];
-    directionDetails.durationValue =  res["routes"][0]["legs"][0]["duration"]["value"];
+    directionDetails.durationText =
+        res["routes"][0]["legs"][0]["duration"]["text"];
+    directionDetails.durationValue =
+        res["routes"][0]["legs"][0]["duration"]["value"];
 
     return directionDetails;
   }
