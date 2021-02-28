@@ -4,6 +4,7 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_geofire/flutter_geofire.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,8 +12,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:smart_rider/configMaps.dart';
 import 'package:smart_rider/dataHandler/app_data.dart';
+import 'package:smart_rider/helpers/geo_fire_helper.dart';
 import 'package:smart_rider/helpers/helper_methods.dart';
 import 'package:smart_rider/models/direction_details.dart';
+import 'package:smart_rider/models/nearbyAvailableDrivers.dart';
 import 'package:smart_rider/screens/login_screen.dart';
 import 'package:smart_rider/screens/search_screen.dart';
 import 'package:smart_rider/widgets/divider.dart';
@@ -53,52 +56,50 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     super.initState();
 
     HelperMethods.getCurrentOnlineUserInfo();
-
   }
 
-  void saveRideRequest(){
-    rideRequestRef = FirebaseDatabase.instance.reference().child("Ride Request").push();
+  void saveRideRequest() {
+    rideRequestRef =
+        FirebaseDatabase.instance.reference().child("Ride Request").push();
 
     var pickup = Provider.of<AppData>(context, listen: false).pickUpLocation;
     var dropOff = Provider.of<AppData>(context, listen: false).dropOffLocation;
 
     Map pickUpLocMap = {
-      "latitude" : pickup.latitude.toString(),
-      "longitude" : pickup.longitude.toString(),
+      "latitude": pickup.latitude.toString(),
+      "longitude": pickup.longitude.toString(),
     };
 
     Map dropOffLocMap = {
-      "latitude" : dropOff.latitude.toString(),
-      "longitude" : dropOff.longitude.toString(),
+      "latitude": dropOff.latitude.toString(),
+      "longitude": dropOff.longitude.toString(),
     };
 
     Map rideInfoMap = {
-      "driver_id" : "waiting",
-      "payment_method" : "cash",
-      "pickup" : pickUpLocMap,
-      "dropOff" : dropOffLocMap,
-      "created_at" : DateTime.now().toString(),
-      "rider" : userCurrentInfo.name,
-      "rider_phone" : userCurrentInfo.phone,
-      "pickup_address" : pickup.placeName,
-      "dropOff_address" : dropOff.placeName,
-
+      "driver_id": "waiting",
+      "payment_method": "cash",
+      "pickup": pickUpLocMap,
+      "dropOff": dropOffLocMap,
+      "created_at": DateTime.now().toString(),
+      "rider": userCurrentInfo.name,
+      "rider_phone": userCurrentInfo.phone,
+      "pickup_address": pickup.placeName,
+      "dropOff_address": dropOff.placeName,
     };
 
     rideRequestRef.push().set(rideInfoMap);
   }
 
-  void cancelRideRequest(){
+  void cancelRideRequest() {
     rideRequestRef.remove();
   }
 
-  void displayRequestRideContainer(){
+  void displayRequestRideContainer() {
     setState(() {
       requestRideContainerHeight = 250.0;
       rideDetailsContainerHeight = 0;
       bottomPaddingOfMap = 230.0;
       drawerOpen = true;
-
     });
 
     saveRideRequest();
@@ -164,9 +165,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         centerTitle: true,
         leading: Container(),
         actions: [
-          IconButton(icon: Icon(Icons.exit_to_app), onPressed: (){FirebaseAuth.instance.signOut();
-          Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (route) => false);
-          })
+          IconButton(
+              icon: Icon(Icons.exit_to_app),
+              onPressed: () {
+                FirebaseAuth.instance.signOut();
+                Navigator.pushNamedAndRemoveUntil(
+                    context, LoginScreen.routeName, (route) => false);
+              })
         ],
       ),
       drawer: Container(
@@ -239,9 +244,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               ),
 
               ListTile(
-                onTap: (){
+                onTap: () {
                   FirebaseAuth.instance.signOut();
-                  Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (route) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, LoginScreen.routeName, (route) => false);
                 },
                 leading: Icon(Icons.info),
                 title: Text(
@@ -649,7 +655,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     SizedBox(
                       height: 12.0,
                     ),
-
                     SizedBox(
                       width: double.infinity,
                       child: ColorizeAnimatedTextKit(
@@ -661,7 +666,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           "Please wait...",
                           "Finding a driver...",
                         ],
-                        textStyle: TextStyle(fontSize: 55.0, fontFamily: "Signatra"),
+                        textStyle:
+                            TextStyle(fontSize: 55.0, fontFamily: "Signatra"),
                         colors: [
                           Colors.green,
                           Colors.purple,
@@ -673,11 +679,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         textAlign: TextAlign.center,
                       ),
                     ),
-
-                    SizedBox(height: 22.0,),
-
+                    SizedBox(
+                      height: 22.0,
+                    ),
                     GestureDetector(
-                      onTap: (){
+                      onTap: () {
                         cancelRideRequest();
                         resetApp();
                       },
@@ -687,17 +693,25 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(100.0),
-                          border: Border.all(width: 2.0, color: Colors.grey[300]),
+                          border:
+                              Border.all(width: 2.0, color: Colors.grey[300]),
                         ),
-                        child: Icon(Icons.close, size: 26.0,),
+                        child: Icon(
+                          Icons.close,
+                          size: 26.0,
+                        ),
                       ),
                     ),
-
-                    SizedBox(height: 10.0,),
-
+                    SizedBox(
+                      height: 10.0,
+                    ),
                     Container(
                       width: double.infinity,
-                      child: Text("Cancel", textAlign: TextAlign.center, style: TextStyle(fontSize: 12.0),),
+                      child: Text(
+                        "Cancel",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12.0),
+                      ),
                     )
                   ],
                 ),
@@ -830,5 +844,47 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       circlesSet.add(pickUpLocCircle);
       circlesSet.add(dropOffLocCircle);
     });
+  }
+
+  void initGoeFireListener() {
+    Geofire.initialize("availableDrivers");
+    //comment
+    Geofire.queryAtLocation(
+            currentPosition.latitude, currentPosition.longitude, 10)
+        .listen((map) {
+      print(map);
+      if (map != null) {
+        var callBack = map['callBack'];
+
+        switch (callBack) {
+          case Geofire.onKeyEntered:
+            NearbyAvailableDrivers nearbyAvailableDrivers = NearbyAvailableDrivers();
+            nearbyAvailableDrivers.key = map["key"];
+            nearbyAvailableDrivers.latitude = map["latitude"];
+            nearbyAvailableDrivers.longitude = map["longitude"];
+            GeoFireHelper.nearbyAvailableDriversList.add(nearbyAvailableDrivers);
+            break;
+
+          case Geofire.onKeyExited:
+            GeoFireHelper.removeDriverFromList(map['key']);
+            break;
+
+          case Geofire.onKeyMoved:
+            NearbyAvailableDrivers nearbyAvailableDrivers = NearbyAvailableDrivers();
+            nearbyAvailableDrivers.key = map["key"];
+            nearbyAvailableDrivers.latitude = map["latitude"];
+            nearbyAvailableDrivers.longitude = map["longitude"];
+            GeoFireHelper.updateDriverNearbyLocation(nearbyAvailableDrivers);
+            break;
+
+          case Geofire.onGeoQueryReady:
+            break;
+        }
+      }
+
+      setState(() {});
+    });
+
+    // comment
   }
 }

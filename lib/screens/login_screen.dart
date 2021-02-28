@@ -1,3 +1,4 @@
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
@@ -30,8 +31,20 @@ class LoginScreen extends StatelessWidget {
               SizedBox(
                 height: 1.0,
               ),
+              // WavyAnimatedTextKit(
+              //   textStyle: TextStyle(
+              //       fontSize: 18.0,
+              //       fontWeight: FontWeight.bold
+              //   ),
+              //   text: [
+              //     "Hello, Welcome",
+              //     "Login Here",
+              //   ],
+              //   isRepeatingAnimation: true,
+              // ),
+
               Text(
-                "Login As a Rider",
+                "Login and Request a Ride!",
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 24.0, fontFamily: "Brand Bold"),
               ),
