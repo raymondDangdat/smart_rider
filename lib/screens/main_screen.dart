@@ -48,8 +48,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   double searchContainerHeight = 300.0;
 
   bool drawerOpen = true;
+  bool nearbyAvailableDriverKeysLoaded = false;
 
   DatabaseReference rideRequestRef;
+
+  BitmapDescriptor nearByIcon;
 
   @override
   void initState() {
@@ -149,6 +152,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     String address =
         await HelperMethods.searchCoordinateAddress(position, context);
     print("This is your address :: " + address);
+
+    initGoeFireListener();
   }
 
   static final CameraPosition _josPosition = CameraPosition(
@@ -158,6 +163,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    createIconMarker();
     return Scaffold(
       key: scaffoldKey,
       appBar: AppBar(
@@ -302,7 +308,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(22.0),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black,
+                        color: Colors.grey,
                         blurRadius: 2.0,
                         spreadRadius: 0.2,
                         offset: Offset(0.2, 0.2),
@@ -336,7 +342,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         topRight: Radius.circular(18.0)),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black,
+                          color: Colors.grey,
                           blurRadius: 2.0,
                           spreadRadius: 0.2,
                           offset: Offset(0.5, 0.5))
@@ -379,7 +385,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               borderRadius: BorderRadius.circular(5.0),
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black54,
+                                    color: Colors.grey,
                                     blurRadius: 2.0,
                                     spreadRadius: 0.2,
                                     offset: Offset(0.5, 0.5))
@@ -863,10 +869,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             nearbyAvailableDrivers.latitude = map["latitude"];
             nearbyAvailableDrivers.longitude = map["longitude"];
             GeoFireHelper.nearbyAvailableDriversList.add(nearbyAvailableDrivers);
+            if(nearbyAvailableDriverKeysLoaded == true){
+              updateAvailableDriverOnMap();
+            }
             break;
 
           case Geofire.onKeyExited:
             GeoFireHelper.removeDriverFromList(map['key']);
+            updateAvailableDriverOnMap();
             break;
 
           case Geofire.onKeyMoved:
@@ -875,9 +885,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             nearbyAvailableDrivers.latitude = map["latitude"];
             nearbyAvailableDrivers.longitude = map["longitude"];
             GeoFireHelper.updateDriverNearbyLocation(nearbyAvailableDrivers);
+            updateAvailableDriverOnMap();
             break;
 
           case Geofire.onGeoQueryReady:
+            updateAvailableDriverOnMap();
             break;
         }
       }
@@ -886,5 +898,37 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     });
 
     // comment
+  }
+
+  void updateAvailableDriverOnMap(){
+    setState(() {
+      markersSet.clear();
+    });
+
+    Set<Marker> tMakers = Set<Marker>();
+    for(NearbyAvailableDrivers driver in GeoFireHelper.nearbyAvailableDriversList){
+      LatLng driverAvailablePosition = LatLng(driver.latitude, driver.longitude);
+
+      Marker marker = Marker(markerId: MarkerId('driver${driver.key}'),
+      position: driverAvailablePosition,
+      icon: nearByIcon,
+        rotation: HelperMethods.createRandomNumber(360),
+      );
+
+      tMakers.add(marker);
+    }
+
+    setState(() {
+      markersSet = tMakers;
+    });
+  }
+
+  void createIconMarker(){
+    if(nearByIcon == null){
+      ImageConfiguration imageConfiguration = createLocalImageConfiguration(context, size: Size(2, 2));
+      BitmapDescriptor.fromAssetImage(imageConfiguration, "images/car_ios.png").then((value) {
+        nearByIcon = value;
+      });
+    }
   }
 }
