@@ -19,6 +19,7 @@ import 'package:smart_rider/models/nearbyAvailableDrivers.dart';
 import 'package:smart_rider/screens/login_screen.dart';
 import 'package:smart_rider/screens/search_screen.dart';
 import 'package:smart_rider/widgets/divider.dart';
+import 'package:smart_rider/widgets/no_driver_available.dart';
 import 'package:smart_rider/widgets/progress_dialog.dart';
 
 class MainScreen extends StatefulWidget {
@@ -53,6 +54,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   DatabaseReference rideRequestRef;
 
   BitmapDescriptor nearByIcon;
+  List<NearbyAvailableDrivers> availableDrivers;
+
+
 
   @override
   void initState() {
@@ -63,7 +67,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   void saveRideRequest() {
     rideRequestRef =
-        FirebaseDatabase.instance.reference().child("Ride Request").push();
+        FirebaseDatabase.instance.reference().child("Ride Request");
 
     var pickup = Provider.of<AppData>(context, listen: false).pickUpLocation;
     var dropOff = Provider.of<AppData>(context, listen: false).dropOffLocation;
@@ -599,6 +603,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           child: RaisedButton(
                             onPressed: () {
                               displayRequestRideContainer();
+                              availableDrivers = GeoFireHelper.nearbyAvailableDriversList;
+                              searchNearestDriver();
                             },
                             color: Theme.of(context).accentColor,
                             shape: RoundedRectangleBorder(
@@ -856,7 +862,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     Geofire.initialize("availableDrivers");
     //comment
     Geofire.queryAtLocation(
-            currentPosition.latitude, currentPosition.longitude, 10)
+            currentPosition.latitude, currentPosition.longitude, 15)
         .listen((map) {
       print(map);
       if (map != null) {
@@ -930,5 +936,25 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         nearByIcon = value;
       });
     }
+  }
+
+  void noDriverFound(){
+    showDialog(
+      barrierDismissible: false,
+        context: context, builder: (BuildContext context) => NoAvailableDriverDialog());
+  }
+
+  void searchNearestDriver(){
+    if(availableDrivers.length == 0){
+      cancelRideRequest();
+      resetApp();
+      noDriverFound();
+      return;
+    }
+
+  //  if it is not zero then get the nearest driver
+
+    var driver = availableDrivers[0];
+    availableDrivers.removeAt(0);
   }
 }
