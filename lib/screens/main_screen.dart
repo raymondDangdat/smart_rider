@@ -4,6 +4,7 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_geofire/flutter_geofire.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,12 +12,12 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:smart_rider/configMaps.dart';
 import 'package:smart_rider/dataHandler/app_data.dart';
-import 'package:smart_rider/helpers/helper_methods.dart';
-import 'package:smart_rider/models/direction_details.dart';
-import 'package:smart_rider/screens/login_screen.dart';
-import 'package:smart_rider/screens/search_screen.dart';
-import 'package:smart_rider/widgets/divider.dart';
-import 'package:smart_rider/widgets/progress_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../helpers/helpers.dart';
+import 'package:smart_rider/main.dart';
+import '../models/models.dart';
+import './screens.dart';
+import '../widgets/widgets.dart';
 
 class MainScreen extends StatefulWidget {
   static const routeName = "main-screen";
@@ -43,65 +44,202 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Set<Circle> circlesSet = {};
   double rideDetailsContainerHeight = 0;
   double searchContainerHeight = 300.0;
+  double driverDetailsContainerHeight = 0;
 
   bool drawerOpen = true;
+  bool nearbyAvailableDriverKeysLoaded = false;
 
   DatabaseReference rideRequestRef;
+
+  BitmapDescriptor nearByIcon;
+  List<NearbyAvailableDrivers> availableDrivers;
+
+  String state = "normal";
+
+  StreamSubscription<Event> rideStreamSubscription;
+
+  bool isRequestingPositionDetails  = false;
+
+
 
   @override
   void initState() {
     super.initState();
 
     HelperMethods.getCurrentOnlineUserInfo();
-
   }
 
-  void saveRideRequest(){
-    rideRequestRef = FirebaseDatabase.instance.reference().child("Ride Request").push();
+  void saveRideRequest() {
+    rideRequestRef =
+        FirebaseDatabase.instance.reference().child("Ride Request");
 
     var pickup = Provider.of<AppData>(context, listen: false).pickUpLocation;
     var dropOff = Provider.of<AppData>(context, listen: false).dropOffLocation;
 
     Map pickUpLocMap = {
-      "latitude" : pickup.latitude.toString(),
-      "longitude" : pickup.longitude.toString(),
+      "latitude": pickup.latitude.toString(),
+      "longitude": pickup.longitude.toString(),
     };
 
     Map dropOffLocMap = {
-      "latitude" : dropOff.latitude.toString(),
-      "longitude" : dropOff.longitude.toString(),
+      "latitude": dropOff.latitude.toString(),
+      "longitude": dropOff.longitude.toString(),
     };
 
     Map rideInfoMap = {
-      "driver_id" : "waiting",
-      "payment_method" : "cash",
-      "pickup" : pickUpLocMap,
-      "dropOff" : dropOffLocMap,
-      "created_at" : DateTime.now().toString(),
-      "rider" : userCurrentInfo.name,
-      "rider_phone" : userCurrentInfo.phone,
-      "pickup_address" : pickup.placeName,
-      "dropOff_address" : dropOff.placeName,
-
+      "driver_id": "waiting",
+      "payment_method": "cash",
+      "pickup": pickUpLocMap,
+      "dropOff": dropOffLocMap,
+      "created_at": DateTime.now().toString(),
+      "rider": userCurrentInfo.name,
+      "rider_phone": userCurrentInfo.phone,
+      "pickup_address": pickup.placeName,
+      "dropOff_address": dropOff.placeName,
     };
 
     rideRequestRef.push().set(rideInfoMap);
+    rideStreamSubscription = rideRequestRef.onValue.listen((event)async {
+
+      if(event.snapshot.value == null){
+        return;
+      }
+
+      if(event.snapshot.value["car_details"] != null){
+        setState(() {
+          driverCarDetails = event.snapshot.value["car_details"].toString();
+        });
+      }
+
+      if(event.snapshot.value["driver_phone"] != null){
+        setState(() {
+          driverPhone = event.snapshot.value["driver_phone"].toString();
+        });
+      }
+
+      if(event.snapshot.value["driver_location"] != null){
+          double driverLat = double.parse(event.snapshot.value["driver_location"]["latitude"].toString());
+          double driverLng = double.parse(event.snapshot.value["driver_location"]["longitude"].toString());
+
+          LatLng driverCurrentLocation = LatLng(driverLat, driverLng);
+
+          if(statusRide == "accepted"){
+            updateRideTimeToPickupLocation(driverCurrentLocation);
+          }else if(statusRide == "onride"){
+            updateRideTimeToDropOffLocation(driverCurrentLocation);
+          }else if(statusRide == "arrived"){
+            setState(() {
+              rideStatus = "Trip completed";
+            });
+          }
+      }
+
+
+      if(event.snapshot.value["driver_name"] != null){
+        setState(() {
+          driverName = event.snapshot.value["driver_name"].toString();
+        });
+      }
+
+      if(event.snapshot.value["status"] != null){
+        statusRide = event.snapshot.value["status"].toString();
+      }
+      if(statusRide == "accepted"){
+        displayDriverDetailsContainer();
+        Geofire.stopListener();
+        deleteGeoFireMarkers();
+      }
+
+      if(statusRide == "ended"){
+         if(event.snapshot.value["fare"] != null){
+           int fare = int.parse(event.snapshot.value["fare"].toString());
+
+           var res =  await showDialog(
+               context: context,
+               barrierDismissible: false,
+               builder: (BuildContext context) => CollectFareDialog(paymentMethod: "cash", fareAmount: fare,));
+
+         //  Check the response from the other end
+           if(res == "close"){
+             rideRequestRef.onDisconnect();
+             rideRequestRef = null;
+             rideStreamSubscription.cancel();
+             rideStreamSubscription = null;
+             resetApp();
+           }
+         }
+      }
+    });
   }
 
-  void cancelRideRequest(){
+  void deleteGeoFireMarkers(){
+    markersSet.removeWhere((element) => element.markerId.value.contains("driver"));
+  }
+
+  void updateRideTimeToPickupLocation(LatLng driverCurrentLocation) async {
+    if(isRequestingPositionDetails == false){
+      isRequestingPositionDetails = true;
+      var positionUserLatLng = LatLng(currentPosition.latitude, currentPosition.longitude);
+      var details = await HelperMethods.obtainPlaceDirectionDetails(driverCurrentLocation, positionUserLatLng);
+
+      if(details == null){
+        return;
+      }
+
+      setState(() {
+        rideStatus = "Driver is coming in " + details.durationText;
+      });
+
+      isRequestingPositionDetails = false;
+    }
+  }
+
+  void updateRideTimeToDropOffLocation(LatLng driverCurrentLocation) async {
+    if(isRequestingPositionDetails == false){
+      isRequestingPositionDetails = true;
+      var dropOff = Provider.of<AppData>(context, listen: false).dropOffLocation;
+      var dropOffUserLatLng = LatLng(dropOff.latitude, dropOff.longitude);
+      var details = await HelperMethods.obtainPlaceDirectionDetails(driverCurrentLocation, dropOffUserLatLng);
+
+      if(details == null){
+        return;
+      }
+
+      setState(() {
+        rideStatus = "Going to destination " + details.durationText;
+      });
+
+      isRequestingPositionDetails = false;
+    }
+  }
+
+
+  void cancelRideRequest() {
     rideRequestRef.remove();
+
+    setState(() {
+      state = "normal";
+    });
   }
 
-  void displayRequestRideContainer(){
+  void displayRequestRideContainer() {
     setState(() {
       requestRideContainerHeight = 250.0;
       rideDetailsContainerHeight = 0;
       bottomPaddingOfMap = 230.0;
       drawerOpen = true;
-
     });
 
     saveRideRequest();
+  }
+
+  void displayDriverDetailsContainer(){
+      setState(() {
+        requestRideContainerHeight = 0.0;
+        rideDetailsContainerHeight = 0.0;
+        bottomPaddingOfMap = 290.0;
+        driverDetailsContainerHeight = 310.0;
+      });
   }
 
   //Create a function that will reset our app
@@ -117,6 +255,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       markersSet.clear();
       circlesSet.clear();
       pLineCoordinates.clear();
+
+      statusRide = "";
+      driverName = "";
+      driverPhone = "";
+      driverCarDetails = "";
+      rideStatus = "Driver is Coming";
+      driverDetailsContainerHeight = 0.0;
     });
 
     locatePosition();
@@ -148,6 +293,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     String address =
         await HelperMethods.searchCoordinateAddress(position, context);
     print("This is your address :: " + address);
+
+    initGoeFireListener();
   }
 
   static final CameraPosition _josPosition = CameraPosition(
@@ -157,6 +304,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    createIconMarker();
     return Scaffold(
       key: scaffoldKey,
       appBar: AppBar(
@@ -164,9 +312,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         centerTitle: true,
         leading: Container(),
         actions: [
-          IconButton(icon: Icon(Icons.exit_to_app), onPressed: (){FirebaseAuth.instance.signOut();
-          Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (route) => false);
-          })
+          IconButton(
+              icon: Icon(Icons.exit_to_app),
+              onPressed: () {
+                FirebaseAuth.instance.signOut();
+                Navigator.pushNamedAndRemoveUntil(
+                    context, LoginScreen.routeName, (route) => false);
+              })
         ],
       ),
       drawer: Container(
@@ -239,9 +391,10 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
               ),
 
               ListTile(
-                onTap: (){
+                onTap: () {
                   FirebaseAuth.instance.signOut();
-                  Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (route) => false);
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, LoginScreen.routeName, (route) => false);
                 },
                 leading: Icon(Icons.info),
                 title: Text(
@@ -296,7 +449,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(22.0),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black,
+                        color: Colors.grey,
                         blurRadius: 2.0,
                         spreadRadius: 0.2,
                         offset: Offset(0.2, 0.2),
@@ -313,6 +466,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             ),
           ),
 
+          //Search dropoff
           Positioned(
             left: 0.0,
             right: 0.0,
@@ -330,7 +484,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         topRight: Radius.circular(18.0)),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black,
+                          color: Colors.grey,
                           blurRadius: 2.0,
                           spreadRadius: 0.2,
                           offset: Offset(0.5, 0.5))
@@ -373,7 +527,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               borderRadius: BorderRadius.circular(5.0),
                               boxShadow: [
                                 BoxShadow(
-                                    color: Colors.black54,
+                                    color: Colors.grey,
                                     blurRadius: 2.0,
                                     spreadRadius: 0.2,
                                     offset: Offset(0.5, 0.5))
@@ -474,6 +628,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
             ),
           ),
 
+           //Ride details position
           Positioned(
               bottom: 0.0,
               left: 0.0,
@@ -586,7 +741,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           padding: EdgeInsets.symmetric(horizontal: 16.0),
                           child: RaisedButton(
                             onPressed: () {
+                              setState(() {
+                                state = "requesting";
+                              });
                               displayRequestRideContainer();
+                              availableDrivers = GeoFireHelper.nearbyAvailableDriversList;
+                              searchNearestDriver();
                             },
                             color: Theme.of(context).accentColor,
                             shape: RoundedRectangleBorder(
@@ -623,6 +783,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 ),
               )),
 
+          //Request/Cancel Position
           Positioned(
             bottom: 0.0,
             left: 0.0,
@@ -649,7 +810,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     SizedBox(
                       height: 12.0,
                     ),
-
                     SizedBox(
                       width: double.infinity,
                       child: ColorizeAnimatedTextKit(
@@ -661,7 +821,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                           "Please wait...",
                           "Finding a driver...",
                         ],
-                        textStyle: TextStyle(fontSize: 55.0, fontFamily: "Signatra"),
+                        textStyle:
+                            TextStyle(fontSize: 55.0, fontFamily: "Signatra"),
                         colors: [
                           Colors.green,
                           Colors.purple,
@@ -673,11 +834,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         textAlign: TextAlign.center,
                       ),
                     ),
-
-                    SizedBox(height: 22.0,),
-
+                    SizedBox(
+                      height: 22.0,
+                    ),
                     GestureDetector(
-                      onTap: (){
+                      onTap: () {
                         cancelRideRequest();
                         resetApp();
                       },
@@ -687,23 +848,104 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(100.0),
-                          border: Border.all(width: 2.0, color: Colors.grey[300]),
+                          border:
+                              Border.all(width: 2.0, color: Colors.grey[300]),
                         ),
-                        child: Icon(Icons.close, size: 26.0,),
+                        child: Icon(
+                          Icons.close,
+                          size: 26.0,
+                        ),
                       ),
                     ),
-
-                    SizedBox(height: 10.0,),
-
+                    SizedBox(
+                      height: 10.0,
+                    ),
                     Container(
                       width: double.infinity,
-                      child: Text("Cancel", textAlign: TextAlign.center, style: TextStyle(fontSize: 12.0),),
+                      child: Text(
+                        "Cancel",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 12.0),
+                      ),
                     )
                   ],
                 ),
               ),
             ),
-          )
+          ),
+
+          //Display assigned driver info
+          Positioned(
+            bottom: 0.0,
+            left: 0.0,
+            right: 0.0,
+            child: Container(
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16.0),
+                    topRight: Radius.circular(16.0),
+                  ),
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                        spreadRadius: 0.2,
+                        blurRadius: 16.0,
+                        color: Colors.black54,
+                        offset: Offset(0.2, 0.2))
+                  ]),
+              height: driverDetailsContainerHeight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 18.0),
+                  child: new Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 6.0,),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(rideStatus, textAlign: TextAlign.center, style: TextStyle(fontSize: 20.0, fontFamily: "Brand Bold"),),
+                        ],
+                      ),
+
+                      SizedBox(height: 22.0,),
+
+                      Divider(height: 2.0, thickness: 2.0,),
+
+                      Text(driverCarDetails, style: TextStyle(color: Colors.grey),),
+
+                      Text(driverName, style: TextStyle(fontSize: 20.0),),
+
+                      SizedBox(height: 22.0,),
+
+                      Divider(height: 2.0, thickness: 2.0,),
+
+                      SizedBox(height: 22.0,),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+
+                        //  CALL BUTTOn
+                          Padding(padding: EdgeInsets.symmetric(horizontal: 20.0),
+                          child: RaisedButton(onPressed: () async{
+                            launch(('tel://${driverPhone}'));
+                          },
+                          color: Colors.pink,
+                            child: Padding(padding: EdgeInsets.all(17.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Text("Call Driver", style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold, color: Colors.white),),
+                                Icon(Icons.call, color: Colors.white, size: 26.0,),
+                              ],
+                            ),),
+                          ),)
+                        ],
+                      )
+                    ],
+                  ),
+                )
+            ),)
         ],
       ),
     );
@@ -829,6 +1071,155 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     setState(() {
       circlesSet.add(pickUpLocCircle);
       circlesSet.add(dropOffLocCircle);
+    });
+  }
+
+  void initGoeFireListener() {
+    Geofire.initialize("availableDrivers");
+    //comment
+    Geofire.queryAtLocation(
+            currentPosition.latitude, currentPosition.longitude, 15)
+        .listen((map) {
+      print(map);
+      if (map != null) {
+        var callBack = map['callBack'];
+
+        switch (callBack) {
+          case Geofire.onKeyEntered:
+            NearbyAvailableDrivers nearbyAvailableDrivers = NearbyAvailableDrivers();
+            nearbyAvailableDrivers.key = map["key"];
+            nearbyAvailableDrivers.latitude = map["latitude"];
+            nearbyAvailableDrivers.longitude = map["longitude"];
+            GeoFireHelper.nearbyAvailableDriversList.add(nearbyAvailableDrivers);
+            if(nearbyAvailableDriverKeysLoaded == true){
+              updateAvailableDriverOnMap();
+            }
+            break;
+
+          case Geofire.onKeyExited:
+            GeoFireHelper.removeDriverFromList(map['key']);
+            updateAvailableDriverOnMap();
+            break;
+
+          case Geofire.onKeyMoved:
+            NearbyAvailableDrivers nearbyAvailableDrivers = NearbyAvailableDrivers();
+            nearbyAvailableDrivers.key = map["key"];
+            nearbyAvailableDrivers.latitude = map["latitude"];
+            nearbyAvailableDrivers.longitude = map["longitude"];
+            GeoFireHelper.updateDriverNearbyLocation(nearbyAvailableDrivers);
+            updateAvailableDriverOnMap();
+            break;
+
+          case Geofire.onGeoQueryReady:
+            updateAvailableDriverOnMap();
+            break;
+        }
+      }
+
+      setState(() {});
+    });
+
+    // comment
+  }
+
+  void updateAvailableDriverOnMap(){
+    setState(() {
+      markersSet.clear();
+    });
+
+    Set<Marker> tMakers = Set<Marker>();
+    for(NearbyAvailableDrivers driver in GeoFireHelper.nearbyAvailableDriversList){
+      LatLng driverAvailablePosition = LatLng(driver.latitude, driver.longitude);
+
+      Marker marker = Marker(markerId: MarkerId('driver${driver.key}'),
+      position: driverAvailablePosition,
+      icon: nearByIcon,
+        rotation: HelperMethods.createRandomNumber(360),
+      );
+
+      tMakers.add(marker);
+    }
+
+    setState(() {
+      markersSet = tMakers;
+    });
+  }
+
+  void createIconMarker(){
+    if(nearByIcon == null){
+      ImageConfiguration imageConfiguration = createLocalImageConfiguration(context, size: Size(2, 2));
+      BitmapDescriptor.fromAssetImage(imageConfiguration, "images/car_ios.png").then((value) {
+        nearByIcon = value;
+      });
+    }
+  }
+
+  void noDriverFound(){
+    showDialog(
+      barrierDismissible: false,
+        context: context, builder: (BuildContext context) => NoAvailableDriverDialog());
+  }
+
+  void searchNearestDriver(){
+    if(availableDrivers.length == 0){
+      cancelRideRequest();
+      resetApp();
+      noDriverFound();
+      return;
+    }
+
+  //  if it is not zero then get the nearest driver
+
+    var driver = availableDrivers[0];
+    notifyDriver(driver);
+    availableDrivers.removeAt(0);
+  }
+
+  void notifyDriver(NearbyAvailableDrivers driver){
+    //Save the ride request ID in the nearest driver's node
+    print("Driver Key################# " + driver.key);
+    print("Ride Key################# " + rideRequestRef.key);
+
+    driversRef.child(driver.key).child("newRide").set(rideRequestRef.key);
+    driversRef.child(driver.key).child("token").once().then((DataSnapshot snap){
+      if(snap.value != null){
+        String token = snap.value.toString();
+        print("########################## token" + token);
+        HelperMethods.sendNotificationToDriver(token, context, rideRequestRef.key);
+      }else {
+        return;
+        // print("############Problem No Token Found ###################");
+      }
+
+
+      const oneSecondPassed = Duration(seconds: 1);
+      var timer = Timer.periodic(oneSecondPassed, (timer) {
+        if(state != "requesting"){
+          driversRef.child(driver.key).child("newRide").set("cancelled");
+          driversRef.child(driver.key).child("newRide").onDisconnect();
+          driverRequestTimeOut = 40;
+          timer.cancel();
+        }
+        driverRequestTimeOut = driverRequestTimeOut - 1;
+
+        driversRef.child(driver.key).child("newRide").onValue.listen((event) {
+          if(event.snapshot.value.toString() == "accepted"){
+            driversRef.child(driver.key).child("newRide").set("timeout");
+            driversRef.child(driver.key).child("newRide").onDisconnect();
+            driverRequestTimeOut = 40;
+            timer.cancel();
+          }
+        });
+
+        if(driverRequestTimeOut == 0){
+          driversRef.child(driver.key).child("newRide").set("timeout");
+          driversRef.child(driver.key).child("newRide").onDisconnect();
+          driverRequestTimeOut = 40;
+          timer.cancel();
+
+          searchNearestDriver();
+        }
+      });
     });
   }
 }
