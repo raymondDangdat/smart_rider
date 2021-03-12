@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../helpers/helpers.dart';
 
 class CollectFareDialog extends StatelessWidget {
   final String paymentMethod;
@@ -32,7 +31,7 @@ class CollectFareDialog extends StatelessWidget {
             SizedBox(
               height: 22.0,
             ),
-            Divider(),
+            Divider(height: 2.0, thickness: 2.0,),
             SizedBox(
               height: 16.0,
             ),
@@ -55,10 +54,7 @@ class CollectFareDialog extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 16.0),
               child: RaisedButton(
                 onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
-
-                  HelperMethods.enableHomeTabLiveLocationUpdate();
+                  Navigator.pop(context, "close");
                 },
                 color: Colors.deepPurple,
                 child: Padding(
@@ -67,7 +63,7 @@ class CollectFareDialog extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        "Collect Cash",
+                        "Pay Cash",
                         style: TextStyle(
                             fontSize: 20.0,
                             fontWeight: FontWeight.bold,

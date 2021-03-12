@@ -12,16 +12,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:smart_rider/configMaps.dart';
 import 'package:smart_rider/dataHandler/app_data.dart';
-import 'package:smart_rider/helpers/geo_fire_helper.dart';
-import 'package:smart_rider/helpers/helper_methods.dart';
+import '../helpers/helpers.dart';
 import 'package:smart_rider/main.dart';
-import 'package:smart_rider/models/direction_details.dart';
-import 'package:smart_rider/models/nearbyAvailableDrivers.dart';
-import 'package:smart_rider/screens/login_screen.dart';
-import 'package:smart_rider/screens/search_screen.dart';
-import 'package:smart_rider/widgets/divider.dart';
-import 'package:smart_rider/widgets/no_driver_available.dart';
-import 'package:smart_rider/widgets/progress_dialog.dart';
+import '../models/models.dart';
+import './screens.dart';
+import '../widgets/widgets.dart';
 
 class MainScreen extends StatefulWidget {
   static const routeName = "main-screen";
@@ -103,7 +98,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     };
 
     rideRequestRef.push().set(rideInfoMap);
-    rideStreamSubscription = rideRequestRef.onValue.listen((event) {
+    rideStreamSubscription = rideRequestRef.onValue.listen((event)async {
 
       if(event.snapshot.value == null){
         return;
@@ -152,6 +147,26 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         displayDriverDetailsContainer();
         Geofire.stopListener();
         deleteGeoFireMarkers();
+      }
+
+      if(statusRide == "ended"){
+         if(event.snapshot.value["fare"] != null){
+           int fare = int.parse(event.snapshot.value["fare"].toString());
+
+           var res =  await showDialog(
+               context: context,
+               barrierDismissible: false,
+               builder: (BuildContext context) => CollectFareDialog(paymentMethod: "cash", fareAmount: fare,));
+
+         //  Check the response from the other end
+           if(res == "close"){
+             rideRequestRef.onDisconnect();
+             rideRequestRef = null;
+             rideStreamSubscription.cancel();
+             rideStreamSubscription = null;
+             resetApp();
+           }
+         }
       }
     });
   }
@@ -239,6 +254,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       markersSet.clear();
       circlesSet.clear();
       pLineCoordinates.clear();
+
+      statusRide = "";
+      driverName = "";
+      driverPhone = "";
+      driverCarDetails = "";
+      rideStatus = "Driver is Coming";
+      driverDetailsContainerHeight = 0.0;
     });
 
     locatePosition();
